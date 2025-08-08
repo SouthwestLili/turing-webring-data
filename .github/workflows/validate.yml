@@ -1,0 +1,65 @@
+name: Validate members.json
+
+on:
+  pull_request:
+    paths:
+      - "public/data/members.json"
+      - "schema.json"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install ajv tools
+        run: |
+          npm i -g ajv-cli@5 ajv-formats
+
+      # 1) follow schema.json for public/data/members.json
+      - name: Schema validation
+        run: |
+          ajv -c ajv-formats validate \
+            -s schema.json \
+            -d public/data/members.json \
+            --spec=draft2020 \
+            --strict=false
+
+      # 2) check for duplicate github/website
+      - name: Duplicate checks (github & website)
+        run: |
+          node -e "
+          const fs=require('fs');
+          const data=JSON.parse(fs.readFileSync('public/data/members.json','utf8'));
+          const norm=(s)=>String(s||'').trim().toLowerCase().replace(/\/$/,''); // 统一大小写&去结尾斜杠
+          const dupOf=(key)=>{
+            const seen=new Map(), dups=[];
+            for(const x of data){
+              const v=norm(x[key]);
+              if(!v) continue;
+              if(seen.has(v)) dups.push(v);
+              else seen.set(v,true);
+            }
+            return [...new Set(dups)];
+          };
+          const dupGit=dupOf('github');
+          const dupWeb=dupOf('website');
+          if(dupGit.length||dupWeb.length){
+            if(dupGit.length) console.error('Duplicate github:', dupGit.join(', '));
+            if(dupWeb.length) console.error('Duplicate website:', dupWeb.join(', '));
+            process.exit(1);
+          }
+          console.log('No duplicate github/website ✅');
+          "
+
+      # 3) (optional) check for valid JSON format in public/data/members.json file
+      - name: JSON parse check
+        run: |
+          node -e "JSON.parse(require('fs').readFileSync('public/data/members.json','utf8')); console.log('JSON OK ✅')"
