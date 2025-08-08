@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["name", "position", "city", "website", "github"],
+    "properties": {
+      "name": { "type": "string", "minLength": 1 },
+      "position": { "type": "string", "minLength": 1 },
+      "city": { "type": "string", "minLength": 1 },
+      "website": {
+        "type": "string",
+        "pattern": "^https?://.+"
+      },
+      "github": {
+        "type": "string",
+        "pattern": "^https?://(www\\.)?github\\.com/[^/]+/?$"
+      }
+    },
+    "additionalProperties": false
+  }
+}
